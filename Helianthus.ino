@@ -21,7 +21,7 @@ int lightSourceToFollow;
 bool done = false; //flag
 
 const int yOffSet = 20; //To make sure light is shining on the solar panel
-const int lightSourceOffset = 100;
+const int lightSourceOffset = 200;
 const int ambientLightOffset = 400;
 
 void setup() { //initiate everything
@@ -113,6 +113,7 @@ void followLight() { //After finding out highest light source follow it
   leftLdrValue = analogRead(leftLdrPin) ;
 
   int ldrMeanValue = (rightLdrValue + leftLdrValue) / 2; 
+  Serial.println(ldrMeanValue);
 
   int difference = abs(rightLdrValue - leftLdrValue); //Find the difference in value of both ldrs
   bool move; 
@@ -120,6 +121,9 @@ void followLight() { //After finding out highest light source follow it
   if (difference >= 0 && difference <= 100) { //If the difference is within a threshold then don't move //need to implement light value............. Don't move if meanldr value below +- 100 lightsourcetofollow
    move = false;
   } else {move = true;}
+  if(ldrMeanValue <= lightSourceToFollow + lightSourceOffset && ldrMeanValue >= lightSourceToFollow - lightSourceOffset) {
+    move = true;
+  } else {move = false;}
 
   if (rightLdrValue < leftLdrValue && move) { //If rightLdrValue is less than the second and it is beyond the threshold do:
     currentAngleX--; //Increments its angle by one
@@ -131,12 +135,12 @@ void followLight() { //After finding out highest light source follow it
     xServo.write(currentAngleX);
   }
   
-  /*if (ldrMeanValue < (lightSourceToFollow - lightSourceOffset)) {
+  /*if (ldrMeanValue < lightSourceToFollow - lightSourceOffset) {
+    if(currentAngleX <)
     searchForLight('y', 30, false) ;//If current x angle between 0-20 do up to 95 if between 80-100 do 50
   }*/
 
 }
-
 
 
 void checkLogic() {
