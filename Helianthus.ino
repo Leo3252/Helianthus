@@ -20,7 +20,9 @@ int lightSourceToFollow;
 
 bool done = false; //flag
 
-const int yOffSet = 25; //To make sure light is shining on the solar panel
+const int yOffSet = 20; //To make sure light is shining on the solar panel
+const int lightSourceOffset = 100;
+const int ambientLightOffset = 400;
 
 void setup() { //initiate everything
   xServo.attach(xPin);
@@ -31,22 +33,20 @@ void setup() { //initiate everything
 void loop() {
 
   if (!done) { //if no highest light source found keep searching
-   lightValueOfX = searchForLight('x', 180);
+   searchForLight('x', 180, false);
    xServo.write(anglePositionAtHighestValueX);
-   lightValueOfY = searchForLight('y', 95);
+   searchForLight('y', 95, true);
    yServo.write(anglePositionAtHighestValueY - yOffSet); 
    
    if (!lightSourceFound) {
-     lightValueOfX = searchForLight('x', 180); //If there's still no light source found keep going
+     searchForLight('x', 180, false); //If there's still no light source found keep going
      xServo.write(anglePositionAtHighestValueX);
-     lightValueOfY = searchForLight('y', 95);
+     searchForLight('y', 95, true);
      yServo.write(anglePositionAtHighestValueY - yOffSet); 
    } 
    else if (lightSourceFound) { //When found
-      
       currentAngleX = anglePositionAtHighestValueX; //Set the current x angle to the above value too
       currentAngleY = anglePositionAtHighestValueY;
-      lightSourceToFollow = lightValueOfY;
       
       done = true; // escape the if statement
     }
@@ -70,7 +70,7 @@ bool lightSourceFound(int state) {
 
 }
 
-int searchForLight(char axis,int maxAngleRange ) { //Optimized so that it can process x and y directions..........Avoid last operation on second run
+void searchForLight(char axis,int maxAngleRange, bool needLightSource ) { //Optimized so that it can process x and y directions..........Avoid last operation on second run
   
   int currentHighestLightValue = 0; //Used to compare between the highest and current light values
   
@@ -99,10 +99,10 @@ int searchForLight(char axis,int maxAngleRange ) { //Optimized so that it can pr
     delay(50);
   }
 
-  if (currentHighestLightValue > 200) { //If the highest light source is above a threshold do (So that it ignores ambient light)
+  if (currentHighestLightValue > ambientLightOffset && needLightSource) { //If the highest light source is above a threshold do (So that it ignores ambient light)
     lightSourceFound(1); //Manually set lightsourcefound to true
-    return currentHighestLightValue; //This is a value that will be used later on by follow light to make sure it is following that value..........
-  } else {lightSourceFound(0); return 0;} //Manually set lightsourcefound to false
+    lightSourceToFollow = currentHighestLightValue; //This is a value that will be used later on by follow light to make sure it is following that value..........
+  } else {lightSourceFound(0);} //Manually set lightsourcefound to false
 }
 
 void followLight() { //After finding out highest light source follow it
@@ -131,13 +131,12 @@ void followLight() { //After finding out highest light source follow it
     xServo.write(currentAngleX);
   }
   
-  if (ldrMeanValue < (lightSourceToFollow - 100)) {
-    searchForLight('y', 30) ;//If current x angle between 0-20 do up to 95 if between 80-100 do 50
-  }
+  /*if (ldrMeanValue < (lightSourceToFollow - lightSourceOffset)) {
+    searchForLight('y', 30, false) ;//If current x angle between 0-20 do up to 95 if between 80-100 do 50
+  }*/
 
 }
 
-//move y axis
 
 
 void checkLogic() {
@@ -148,4 +147,3 @@ void checkLogic() {
   }
 }
 
-//Every 10 degrees move up and down to check
