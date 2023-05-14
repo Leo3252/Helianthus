@@ -21,7 +21,6 @@ int counter = 0;
 
 bool done = false; //flag
 
-const int yOffSet = 20; //To make sure light is shining on the solar panel
 const int lightSourceOffset = 200;
 const int ambientLightOffset = 400;
 
@@ -35,20 +34,13 @@ void loop() {
 
   if (!done) { //if no highest light source found keep searching
    searchForLight('x', 180, false);
-   xServo.write(anglePositionAtHighestValueX);
    searchForLight('y', 95, true);
-   yServo.write(anglePositionAtHighestValueY - yOffSet); 
    
    if (!lightSourceFound) {
      searchForLight('x', 180, false); //If there's still no light source found keep going
-     xServo.write(anglePositionAtHighestValueX);
      searchForLight('y', 95, true);
-     yServo.write(anglePositionAtHighestValueY - yOffSet); 
    } 
    else if (lightSourceFound) { //When found
-      currentAngleX = anglePositionAtHighestValueX; //Set the current x angle to the above value too
-      currentAngleY = anglePositionAtHighestValueY;
-      
       done = true; // escape the if statement
     }
   }
@@ -83,11 +75,8 @@ void searchForLight(char axis,int maxAngleRange, bool needLightSource ) { //Opti
 
     rightLdrValue = analogRead(rightLdrPin); //Update ldr values for each iteration
     leftLdrValue = analogRead(leftLdrPin); 
-    rightLdrValue = rightLdrValue - 40; //Calibration
     
     ldrMeanValue = (rightLdrValue + leftLdrValue) / 2; 
-
-    Serial.println(ldrMeanValue);
 
     if(ldrMeanValue > currentHighestLightValue) { 
       currentHighestLightValue = ldrMeanValue;
@@ -101,6 +90,9 @@ void searchForLight(char axis,int maxAngleRange, bool needLightSource ) { //Opti
     delay(50);
   }
 
+  if(axis == 'x') {xServo.write(anglePositionAtHighestValueX); currentAngleX = anglePositionAtHighestValueX;} //Stores the angle positions so that it can later go back to it
+  else if (axis == 'y') {yServo.write(anglePositionAtHighestValueY); currentAngleY = anglePositionAtHighestValueY;}
+   
   if (currentHighestLightValue > ambientLightOffset && needLightSource) { //If the highest light source is above a threshold do (So that it ignores ambient light)
     lightSourceFound(1); //Manually set lightsourcefound to true
     lightSourceToFollow = currentHighestLightValue; //This is a value that will be used later on by follow light to make sure it is following that value..........
@@ -113,46 +105,38 @@ void followLight() { //After finding out highest light source follow it
 
   rightLdrValue = analogRead(rightLdrPin); //Start reading sensors
   leftLdrValue = analogRead(leftLdrPin) ;
-  rightLdrValue = rightLdrValue - 40; //Calibration
-  Serial.print("Right sensor val: ");
-  Serial.println(rightLdrValue);
-  Serial.print("Left sensor val: ");
-  Serial.println(leftLdrValue);
 
   int ldrMeanValue = (rightLdrValue + leftLdrValue) / 2; 
-  Serial.print("Mean sensor val: ");
-  Serial.println(ldrMeanValue);
 
   int difference = abs(rightLdrValue - leftLdrValue); //Find the difference in value of both ldrs
   bool move; 
+  bool move2;
 
-  if (difference >= 0 && difference <= 10) { //If the difference is within a threshold then don't move //need to implement light value............. Don't move if meanldr value below +- 100 lightsourcetofollow
+  if (difference >= 0 && difference <= 5) { //If the difference is within a threshold then don't move //need to implement light value............. Don't move if meanldr value below +- 100 lightsourcetofollow
    move = false;
   } else {move = true;}
   if(ldrMeanValue <= lightSourceToFollow + lightSourceOffset && ldrMeanValue >= lightSourceToFollow - lightSourceOffset) {
-    move = true;
-  } else {move = false;}
+    move2 = true;
+  } else {move2 = false;}
 
-  if (rightLdrValue < leftLdrValue && move) { //If rightLdrValue is less than the second and it is beyond the threshold do:
-    currentAngleX--; //Increments its angle by one
-    xServo.write(currentAngleX); //write it to motor
+  if (rightLdrValue < leftLdrValue && move && move2) { //If rightLdrValue is less than the second and it is beyond the threshold do:
     counter++;
-    Serial.println(counter);
- 
+    currentAngleX--; //Increments its angle by one
+    xServo.write(currentAngleX); //write it to motor  
   }
-  else if (rightLdrValue > leftLdrValue && move) { //Same here
+  else if (rightLdrValue > leftLdrValue && move && move2) { //Same here
+    counter++;
     currentAngleX++;
     xServo.write(currentAngleX);
-    counter++;
-    Serial.println(counter);
+    
   }
   
   //After some repetition ideally
-  if (ldrMeanValue < lightSourceToFollow - lightSourceOffset && counter == 15) {
+  if (counter == 30) {
     if(currentAngleX < 60 || currentAngleX > 120) {
       searchForLight('y', 95, false);
     } else if (currentAngleX >= 60 && currentAngleX <= 120) {
-      searchForLight('y', 45, false);
+      searchForLight('y', 60, false); 
     }
     counter = 0;
     
