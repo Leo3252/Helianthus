@@ -1,19 +1,18 @@
 #include <Servo.h>
+#include <SoftwareSerial.h>
 
 Servo xServo; 
 Servo yServo;
 
-int rightLdrPin = A0; 
-int leftLdrPin = A1; 
-int xPin = 9;
-int yPin = 10;
+const int rightLdrPin = A0; 
+const int leftLdrPin = A1; 
+const int xPin = 9;
+const int yPin = 10;
 
 int rightLdrValue = 0;
 int leftLdrValue = 0; 
 int anglePositionAtHighestValueX = 0; //variable to store highest light value
 int anglePositionAtHighestValueY = 0;
-int lightValueOfX; //Stores the highest light value found by "search for light"
-int lightValueOfY;
 int currentAngleX; //Used to alter the current x position
 int currentAngleY;
 int lightSourceToFollow;
@@ -24,15 +23,24 @@ bool done = false; //flag
 const int lightSourceOffset = 200;
 const int ambientLightOffset = 400;
 
+//OBTAINING WATTAGE:
+const int voltagePin = A2;
+const int currentPin = A3;
+const int numberToMultiply = 5;
+
+//Bluetooth
+SoftwareSerial bluetoothSerial(0, 1);
+
 void setup() { //initiate everything
   xServo.attach(xPin);
   yServo.attach(yPin);
   Serial.begin(9600);
+  bluetoothSerial.begin(9600);
 }
 
 void loop() {
 
-  if (!done) { //if no highest light source found keep searching
+  /*if (!done) { //if no highest light source found keep searching
    searchForLight('x', 180, false);
    searchForLight('y', 95, true);
    
@@ -45,7 +53,11 @@ void loop() {
     }
   }
   
-  followLight();
+  followLight();*/
+
+  float wattage = abs(readWattage());
+  Serial.println(wattage);
+  bluetoothSerial.println(wattage);
 
   //If no more light look for it once again if not maybe servo motor to close lid
   
@@ -53,7 +65,7 @@ void loop() {
 }
 
 //METHODS..........................................
-bool lightSourceFound(int state) {
+/*bool lightSourceFound(int state) {
  
  if(state == 1) {
     return true;
@@ -144,12 +156,23 @@ void followLight() { //After finding out highest light source follow it
 
 }
 
-
 void checkLogic() {
   if (currentAngleX > 180) {
     currentAngleX = 180;
   } else if (currentAngleX < 0) {
     currentAngleX = 0;
   }
+}*/
+
+float readWattage() {
+  int voltageValue = analogRead(voltagePin);
+  float voltage = (voltageValue/1023.0) * numberToMultiply;
+
+  float current = analogRead(currentPin) * (numberToMultiply / 1023.0);
+  current = (current - (numberToMultiply / 2.0)) / 0.185;
+
+
+  return voltage * current;
+
 }
 
