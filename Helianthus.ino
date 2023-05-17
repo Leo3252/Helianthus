@@ -1,5 +1,4 @@
 #include <Servo.h>
-#include <SoftwareSerial.h>
 
 Servo xServo; 
 Servo yServo;
@@ -28,14 +27,10 @@ const int voltagePin = A2;
 const int currentPin = A3;
 const int numberToMultiply = 5;
 
-//Bluetooth
-SoftwareSerial bluetoothSerial(0, 1);
-
 void setup() { //initiate everything
   xServo.attach(xPin);
   yServo.attach(yPin);
   Serial.begin(9600);
-  bluetoothSerial.begin(9600);
 }
 
 void loop() {
@@ -55,13 +50,17 @@ void loop() {
   
   followLight();*/
 
-  float wattage = abs(readWattage());
-  Serial.println(wattage);
-  bluetoothSerial.println(wattage);
+  float wattage = readWattage();
+  wattage = abs(wattage);
+
+  byte outputWattage = (map(wattage*100, 0, 100, 0, 25500)/100);
+
+  Serial.write(outputWattage);
+
 
   //If no more light look for it once again if not maybe servo motor to close lid
   
-  delay(100);
+  delay(1000);
 }
 
 //METHODS..........................................
