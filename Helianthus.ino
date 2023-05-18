@@ -15,10 +15,9 @@ int anglePositionAtHighestValueY = 0;
 int currentAngleX; //Used to alter the current x position
 int currentAngleY;
 int lightSourceToFollow;
+
 int counter = 0;
-
 bool done = false; //flag
-
 const int lightSourceOffset = 200;
 const int ambientLightOffset = 400;
 
@@ -29,8 +28,8 @@ const int numberToMultiply = 5;
 
 //Bluetooth
 char receivedData;
-char ignore = 'z';
-
+String operation = "FOLLOW_LIGHT";
+bool infoPresent;
 
 void setup() { //initiate everything
   xServo.attach(xPin);
@@ -39,7 +38,7 @@ void setup() { //initiate everything
 }
 
 void loop() {
-
+ 
   if (!done) { //if no highest light source found keep searching
    searchForLight('x', 180, false);
    searchForLight('y', 95, true);
@@ -55,9 +54,20 @@ void loop() {
   
   determineOperation();
   
-  delay(50);
+  if(operation == "READ_WATTAGE") {
+    outputWattageToApp(); 
+    delay(900);
+  } 
+  else if(operation == "MOVE_TRACKER") {
+    if(!infoPresent) {return;}
+    interpretData(receivedData);
+  } 
+  else if(operation == "FOLLOW_LIGHT") {
+    followLight();
+  }
+  
+  delay(100);
 }
-
 //METHODS..........................................
 bool lightSourceFound(int state) {
  
@@ -66,7 +76,6 @@ bool lightSourceFound(int state) {
   } else if (state == 0) {
     return false;
   }
-
 }
 
 void searchForLight(char axis,int maxAngleRange, bool needLightSource ) { //Optimized so that it can process x and y directions..........Avoid last operation on second run
@@ -75,15 +84,12 @@ void searchForLight(char axis,int maxAngleRange, bool needLightSource ) { //Opti
   
   if(axis == 'x') {xServo.write(0);} //This is a tradeoff if I were to optimize the code
   else if (axis == 'y') {yServo.write(0);} //Initializes servomotor to 0 degrees so that it can scan around
-
   for(int angle = 0; angle <= maxAngleRange; angle++) { //Using the value given by the parameter, the scan will go up until it satisifies the statement
     int ldrMeanValue;
-
     rightLdrValue = analogRead(rightLdrPin); //Update ldr values for each iteration
     leftLdrValue = analogRead(leftLdrPin); 
     
     ldrMeanValue = (rightLdrValue + leftLdrValue) / 2; 
-
     if(ldrMeanValue > currentHighestLightValue) { 
       currentHighestLightValue = ldrMeanValue;
       if(axis == 'x') {anglePositionAtHighestValueX = angle;} //Stores the angle positions so that it can later go back to it
@@ -95,7 +101,6 @@ void searchForLight(char axis,int maxAngleRange, bool needLightSource ) { //Opti
     
     delay(50);
   }
-
   if(axis == 'x') {xServo.write(anglePositionAtHighestValueX); currentAngleX = anglePositionAtHighestValueX;} //Stores the angle positions so that it can later go back to it
   else if (axis == 'y') {yServo.write(anglePositionAtHighestValueY); currentAngleY = anglePositionAtHighestValueY;}
    
@@ -106,25 +111,19 @@ void searchForLight(char axis,int maxAngleRange, bool needLightSource ) { //Opti
 }
 
 void followLight() { //After finding out highest light source follow it
-
   checkLogic();
-
   rightLdrValue = analogRead(rightLdrPin); //Start reading sensors
   leftLdrValue = analogRead(leftLdrPin) ;
-
   int ldrMeanValue = (rightLdrValue + leftLdrValue) / 2; 
-
   int difference = abs(rightLdrValue - leftLdrValue); //Find the difference in value of both ldrs
   bool move; 
   bool move2;
-
   if (difference >= 0 && difference <= 5) { //If the difference is within a threshold then don't move //need to implement light value............. Don't move if meanldr value below +- 100 lightsourcetofollow
    move = false;
   } else {move = true;}
   if(ldrMeanValue <= lightSourceToFollow + lightSourceOffset && ldrMeanValue >= lightSourceToFollow - lightSourceOffset) {
     move2 = true;
   } else {move2 = false;}
-
   if (rightLdrValue < leftLdrValue && move && move2) { //If rightLdrValue is less than the second and it is beyond the threshold do:
     counter++;
     currentAngleX--; //Increments its angle by one
@@ -147,7 +146,6 @@ void followLight() { //After finding out highest light source follow it
     counter = 0;
     
   }
-
 }
 
 void checkLogic() {
@@ -161,63 +159,32 @@ void checkLogic() {
 float readWattage() {
   int voltageValue = analogRead(voltagePin);
   float voltage = (voltageValue/1023.0) * numberToMultiply;
-
   float current = analogRead(currentPin) * (numberToMultiply / 1023.0);
   current = (current - (numberToMultiply / 2.0)) / 0.185;
-
-
   return voltage * current;
-
 }
-
 void determineOperation() {
   if(Serial.available() > 0) {
+    infoPresent = true;
     receivedData = Serial.read();
     
-    while (receivedData == 'x') {
-      char individualData = Serial.read();
-      interpretData(individualData);
-      if(individualData == 'y') {
-        receivedData = 'y';
-      } else if (individualData == 'z') {
-        receivedData = 'z';
-      }
-      delay(100);
+    if(receivedData == 'x') {
+      operation = "MOVE_TRACKER";
     }
-    while (receivedData == 'y'){
-      char individualData = Serial.read();
-      outputWattageToApp();
-      if(individualData == 'x') {
-        receivedData = 'x';
-      } else if (individualData == 'z') {
-        receivedData = 'z';
-      }
-      delay(1000);
+    else if (receivedData == 'y'){
+      operation = "READ_WATTAGE";
     }
-    while (receivedData == 'z' || ignore == 'z') { //When connection is about to terminate
-      char individualData = Serial.read();
-      followLight();
-      if(individualData == 'y') {
-        receivedData = 'y';
-        ignore = '0';
-      } else if (individualData == 'x') {
-        receivedData = 'x';
-        ignore = '0';
-      }
-      delay(100);
+    else if (receivedData == 'z') { //When connection is about to terminate
+      operation = "FOLLOW_LIGHT";
     }
-  }
+  } else{infoPresent = false;}
 }
-
 void outputWattageToApp() {
   float wattage = readWattage();
   wattage = abs(wattage);
-
   byte outputWattage = (map(wattage*100, 0, 100, 0, 25500)/100);
-
   Serial.write(outputWattage);
 }
-
 void interpretData(char data) {
   if(data == '1') {
     currentAngleY--;
@@ -244,6 +211,4 @@ void interpretData(char data) {
     currentAngleX = currentAngleX - 2;
     xServo.write(currentAngleX);
   }
-
 }
-
