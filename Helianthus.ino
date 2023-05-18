@@ -27,6 +27,10 @@ const int voltagePin = A2;
 const int currentPin = A3;
 const int numberToMultiply = 5;
 
+//Bluetooth
+char receivedData;
+String operation = "FOLLOW_LIGHT";
+
 void setup() { //initiate everything
   xServo.attach(xPin);
   yServo.attach(yPin);
@@ -35,7 +39,7 @@ void setup() { //initiate everything
 
 void loop() {
 
-  /*if (!done) { //if no highest light source found keep searching
+  if (!done) { //if no highest light source found keep searching
    searchForLight('x', 180, false);
    searchForLight('y', 95, true);
    
@@ -48,23 +52,24 @@ void loop() {
     }
   }
   
-  followLight();*/
+  determineOperation();
 
-  float wattage = readWattage();
-  wattage = abs(wattage);
-
-  byte outputWattage = (map(wattage*100, 0, 100, 0, 25500)/100);
-
-  Serial.write(outputWattage);
-
-
-  //If no more light look for it once again if not maybe servo motor to close lid
+  if(operation == "READ_WATTAGE") {
+    outputWattageToApp(); 
+    delay(900);
+  } 
+  else if(operation == "MOVE_TRACKER") {
+    interpretData(receivedData);
+  } 
+  else if(operation == "FOLLOW_LIGHT") {
+    followLight();
+  }
   
-  delay(1000);
+  delay(100);
 }
 
 //METHODS..........................................
-/*bool lightSourceFound(int state) {
+bool lightSourceFound(int state) {
  
  if(state == 1) {
     return true;
@@ -161,7 +166,7 @@ void checkLogic() {
   } else if (currentAngleX < 0) {
     currentAngleX = 0;
   }
-}*/
+}
 
 float readWattage() {
   int voltageValue = analogRead(voltagePin);
@@ -172,6 +177,60 @@ float readWattage() {
 
 
   return voltage * current;
+
+}
+
+void determineOperation() {
+  if(Serial.available() > 0) {
+    receivedData = Serial.read();
+    
+    if(receivedData == 'x') {
+      operation = "MOVE_TRACKER";
+    }
+    else if (receivedData == 'y'){
+      operation = "READ_WATTAGE";
+    }
+    else if (receivedData == 'z') { //When connection is about to terminate
+      operation = "FOLLOW_LIGHT";
+    }
+  }
+}
+
+void outputWattageToApp() {
+  float wattage = readWattage();
+  wattage = abs(wattage);
+
+  byte outputWattage = (map(wattage*100, 0, 100, 0, 25500)/100);
+
+  Serial.write(outputWattage);
+}
+
+void interpretData(char data) {
+  if(data == '1') {
+    currentAngleY--;
+    yServo.write(currentAngleY);
+  } else if (data == '2') {
+    currentAngleY++;
+    yServo.write(currentAngleY);
+  } else if (data == '3') {
+    currentAngleX++;
+    xServo.write(currentAngleX);
+  } else if (data == '4') {
+    currentAngleX--;
+    xServo.write(currentAngleX);
+  } else if (data == 'a') {
+    currentAngleY = currentAngleY - 2;
+    yServo.write(currentAngleY);
+  } else if (data == 'b') {
+    currentAngleY = currentAngleY + 2;
+    yServo.write(currentAngleY);
+  } else if (data == 'c') {
+    currentAngleX = currentAngleX + 2;
+    xServo.write(currentAngleX);
+  } else if (data == 'd') {
+    currentAngleX = currentAngleX - 2;
+    xServo.write(currentAngleX);
+  }
 
 }
 
