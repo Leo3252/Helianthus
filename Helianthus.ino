@@ -29,7 +29,8 @@ const int numberToMultiply = 5;
 
 //Bluetooth
 char receivedData;
-String operation = "FOLLOW_LIGHT";
+char ignore = 'z';
+
 
 void setup() { //initiate everything
   xServo.attach(xPin);
@@ -53,19 +54,8 @@ void loop() {
   }
   
   determineOperation();
-
-  if(operation == "READ_WATTAGE") {
-    outputWattageToApp(); 
-    delay(900);
-  } 
-  else if(operation == "MOVE_TRACKER") {
-    interpretData(receivedData);
-  } 
-  else if(operation == "FOLLOW_LIGHT") {
-    followLight();
-  }
   
-  delay(100);
+  delay(50);
 }
 
 //METHODS..........................................
@@ -184,14 +174,37 @@ void determineOperation() {
   if(Serial.available() > 0) {
     receivedData = Serial.read();
     
-    if(receivedData == 'x') {
-      operation = "MOVE_TRACKER";
+    while (receivedData == 'x') {
+      char individualData = Serial.read();
+      interpretData(individualData);
+      if(individualData == 'y') {
+        receivedData = 'y';
+      } else if (individualData == 'z') {
+        receivedData = 'z';
+      }
+      delay(100);
     }
-    else if (receivedData == 'y'){
-      operation = "READ_WATTAGE";
+    while (receivedData == 'y'){
+      char individualData = Serial.read();
+      outputWattageToApp();
+      if(individualData == 'x') {
+        receivedData = 'x';
+      } else if (individualData == 'z') {
+        receivedData = 'z';
+      }
+      delay(1000);
     }
-    else if (receivedData == 'z') { //When connection is about to terminate
-      operation = "FOLLOW_LIGHT";
+    while (receivedData == 'z' || ignore == 'z') { //When connection is about to terminate
+      char individualData = Serial.read();
+      followLight();
+      if(individualData == 'y') {
+        receivedData = 'y';
+        ignore = '0';
+      } else if (individualData == 'x') {
+        receivedData = 'x';
+        ignore = '0';
+      }
+      delay(100);
     }
   }
 }
