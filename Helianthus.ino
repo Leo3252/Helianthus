@@ -66,6 +66,8 @@ void loop() {
     followLight();
   }
   
+  checkLogic();
+
   delay(100);
 }
 //METHODS..........................................
@@ -154,6 +156,11 @@ void checkLogic() {
   } else if (currentAngleX < 0) {
     currentAngleX = 0;
   }
+  if (currentAngleY > 95) {
+    currentAngleY = 95;
+  } else if (currentAngleX < 0) {
+    currentAngleX = 0;
+  }
 }
 
 float readWattage() {
@@ -187,28 +194,16 @@ void outputWattageToApp() {
 }
 void interpretData(char data) {
   if(data == '1') {
-    currentAngleY--;
+    currentAngleY = currentAngleY - 5;
     yServo.write(currentAngleY);
   } else if (data == '2') {
-    currentAngleY++;
+    currentAngleY = currentAngleY + 5;
     yServo.write(currentAngleY);
   } else if (data == '3') {
-    currentAngleX++;
+    currentAngleX = currentAngleX + 10;
     xServo.write(currentAngleX);
   } else if (data == '4') {
-    currentAngleX--;
-    xServo.write(currentAngleX);
-  } else if (data == 'a') {
-    currentAngleY = currentAngleY - 2;
-    yServo.write(currentAngleY);
-  } else if (data == 'b') {
-    currentAngleY = currentAngleY + 2;
-    yServo.write(currentAngleY);
-  } else if (data == 'c') {
-    currentAngleX = currentAngleX + 2;
-    xServo.write(currentAngleX);
-  } else if (data == 'd') {
-    currentAngleX = currentAngleX - 2;
+    currentAngleX = currentAngleX - 10;
     xServo.write(currentAngleX);
   }
 }
