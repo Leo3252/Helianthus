@@ -19,12 +19,14 @@ int currentAngleY;
 int lightSourceToFollow;
 int terminateAtSecondSearch; //Stops looking for sunlight after 2 searches
 int counter = 0; //To calc the number of rotations made by servo
+int timer = 0; //timer
 bool done = false; //flag
 bool lightSourceFound;
 
 //Alter-able value
 const int lightSourceOffset = 200; //To keep following the initial light intensity
 const int ambientLightOffset = 400; //To make sure you're pointing at a light source
+const int yOffset = 20; //To offset the distance between panel and sensors
 
 //OBTAINING WATTAGE:
 const int voltagePin = A2;
@@ -45,6 +47,8 @@ void setup() { //initiate everything
 void loop() {
   if(terminateAtSecondSearch >= 2) {return;} //Maybe turn on led indicator
   else{
+    timer++;
+
     if (!done) { //if no highest light source found keep searching
     searchForLight('x', 150, false); //Search at x axis, through 150º, don't ask for highest light source
     searchForLight('y', 95, true); //Search at y axis, through 95º, ask for highest light source value
@@ -87,8 +91,9 @@ void loop() {
       followLight(); //Follow light
     }
     
-    //MUST IMPLEMENT INSIDE INTERPRET DATA SO THAT IF SUM IS ABOVE THRESHOLD DONT MOVE-----------------------------------------
     checkLogic();
+
+    positionSolarPanelAtBetterAngle();
 
     delay(100);
   }
@@ -133,6 +138,8 @@ void searchForLight(char axis, int maxAngleRange, bool needLightSource ) { //Las
     lightSourceFound = true; 
     lightSourceToFollow = currentHighestLightValue; //This is a value that will be used later on by follow light to make sure it is following that value..........
   } else {lightSourceFound = false;}
+
+  timer = 0;
 }
 
 void determineOperation() { //Find out what we're doing
@@ -149,6 +156,7 @@ void determineOperation() { //Find out what we're doing
     else if (receivedData == 'z') { //When connection is terminated do:
       operation = "FOLLOW_LIGHT"; //Start following light
     }
+    timer = 0;
   } else{infoPresent = false;} //If no info sent set flag to false
 }
 
@@ -181,6 +189,7 @@ void interpretData(char data) { //Find out what data is being sent by app
     currentAngleX = currentAngleX - 10;
     xServo.write(currentAngleX);
   }
+  timer = 0;
 }
 
 void followLight() { //After finding out highest light source follow it 
@@ -208,11 +217,13 @@ void followLight() { //After finding out highest light source follow it
     counter++; //Count so that we know when to update y-angle position
     currentAngleX--; //Increments its angle by one
     xServo.write(currentAngleX); //write it to motor  
+    timer = 0;
   }
   else if (rightLdrValue > leftLdrValue && move && move2) { //Same here
     counter++;
     currentAngleX++;
     xServo.write(currentAngleX);
+    timer = 0;
     
   }
   
@@ -229,14 +240,30 @@ void followLight() { //After finding out highest light source follow it
 }
 
 void checkLogic() { //If current angle is above or below allowed threshold then set them back to original value
-  if (currentAngleX > 150) {
+  if (currentAngleX > 150) { //Checking X-axis 
     currentAngleX = 150;
   } else if (currentAngleX < 0) {
     currentAngleX = 0;
   }
-  if (currentAngleY > 95) {
+  if (currentAngleY > 95) { //Checking Y-axis
     currentAngleY = 95;
   } else if (currentAngleX < 0) {
     currentAngleX = 0;
   }
+  
+  /*if (currentAngleY < 10) { //ONLY IF NECESSARY, (prevents 0º)
+    currentAngleY = 10;
+    yServo.write(currentAnlgeY;)
+    timer = 0;
+  }*/
+}
+
+void positionSolarPanelAtBetterAngle() {
+  if (timer > 200) { //+- 20 seconds 
+      timer = 0; //Reset clock
+      if (currentAngleY >= yOffset) {
+        currentAngleY = currentAngleY - yOffset; //Make sure pointing directly at sun
+        yServo.write(currentAngleY);
+      } else {return;}
+    } 
 }
