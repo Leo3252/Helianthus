@@ -43,11 +43,11 @@ void setup() { //initiate everything
 void loop() {
  
   if (!done) { //if no highest light source found keep searching
-   searchForLight('x', 180, false); //Search at x axis, through 180º, don't ask for highest light source
+   searchForLight('x', 150, false); //Search at x axis, through 150º, don't ask for highest light source
    searchForLight('y', 95, true); //Search at y axis, through 95º, ask for highest light source value
    
    if (!lightSourceFound) { //If there's still no light source found keep going
-     searchForLight('x', 180, false); //Same as above
+     searchForLight('x', 150, false); //Same as above
      searchForLight('y', 95, true);
    } 
    else if (lightSourceFound) { //When found
@@ -86,6 +86,7 @@ void loop() {
 
   delay(100);
 }
+
 //METHODS in order of appearance........................................................
 
 //Optimized so that it can process x and y directions without the need of two different methods
@@ -170,16 +171,16 @@ float readWattage() {
 }
 
 void interpretData(char data) { //Find out what data is being sent by app
-  if(data == '1') { 
+  if(data == '1' && (currentAngleY - 5) >= 0) { //UP
     currentAngleY = currentAngleY - 5;
     yServo.write(currentAngleY);
-  } else if (data == '2') {
+  } else if (data == '2' && (currentAngleY + 5) <= 95) { //DOWN
     currentAngleY = currentAngleY + 5;
     yServo.write(currentAngleY);
-  } else if (data == '3') {
+  } else if (data == '3' && (currentAngleX + 10) <= 150) { //RIGHT
     currentAngleX = currentAngleX + 10;
     xServo.write(currentAngleX);
-  } else if (data == '4') {
+  } else if (data == '4' && (currentAngleX - 10) >= 0) { //LEFT
     currentAngleX = currentAngleX - 10;
     xServo.write(currentAngleX);
   }
@@ -231,8 +232,8 @@ void followLight() { //After finding out highest light source follow it
 }
 
 void checkLogic() { //If current angle is above or below allowed threshold then set them back to original value
-  if (currentAngleX > 180) {
-    currentAngleX = 180;
+  if (currentAngleX > 150) {
+    currentAngleX = 150;
   } else if (currentAngleX < 0) {
     currentAngleX = 0;
   }
