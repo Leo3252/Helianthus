@@ -17,8 +17,10 @@ int anglePositionAtHighestValueY = 0;
 int currentAngleX; //Used to alter the current angle positions
 int currentAngleY;
 int lightSourceToFollow;
+int terminateAtSecondSearch; //Stops looking for sunlight after 2 searches
 int counter = 0; //To calc the number of rotations made by servo
 bool done = false; //flag
+bool lightSourceFound;
 
 //Alter-able value
 const int lightSourceOffset = 200; //To keep following the initial light intensity
@@ -41,50 +43,55 @@ void setup() { //initiate everything
 }
 
 void loop() {
- 
-  if (!done) { //if no highest light source found keep searching
-   searchForLight('x', 150, false); //Search at x axis, through 150º, don't ask for highest light source
-   searchForLight('y', 95, true); //Search at y axis, through 95º, ask for highest light source value
-   
-   if (!lightSourceFound) { //If there's still no light source found keep going
-     searchForLight('x', 150, false); //Same as above
-     searchForLight('y', 95, true);
-   } 
-   else if (lightSourceFound) { //When found
-      done = true; // escape the if statement
+  if(terminateAtSecondSearch >= 2) {return;} //Maybe turn on led indicator
+  else{
+    if (!done) { //if no highest light source found keep searching
+    searchForLight('x', 150, false); //Search at x axis, through 150º, don't ask for highest light source
+    searchForLight('y', 95, true); //Search at y axis, through 95º, ask for highest light source value
+    terminateAtSecondSearch++;
+    
+    if (!lightSourceFound) { //If there's still no light source found keep going
+      searchForLight('x', 150, false); //Same as above
+      searchForLight('y', 95, true);
+      if(!lightSourceFound){terminateAtSecondSearch++;}
+      else if (lightSourceFound) {done = true;}
+    } 
+    else if (lightSourceFound) { //When found
+        done = true; // escape the if statement
+      }
     }
-  }
-  
-  determineOperation(); //We need to find out what task should we carry out from the options below
-  
-  //Tasks
-  //We initialized operation to follow light so that it'll follow the light until otherwise
-  if(operation == "READ_WATTAGE") { //When operation is set to the wattage reader do:
-    outputWattageToApp(); //Sent wattage info to app
-    delay(900); //This plus the 100ms delay at the end sum to 1sec, which is the required interval
-  } 
-  else if(operation == "MOVE_TRACKER") { //When operation is set to manually move tracker do:
-    /*The code below is important: We set operation to move tracker but if no bool flag present
-    operation will remain as move tracker and it will continue to move the robot in the first direction 
-    you give. To fix this we need to know when instructions are coming in from the app to move the tracker
-    w/o compromising the current method (using variable "operation" to define task). 
-    So, a run down on how it works:
-    First call of void loop, operation is MOVE TRACKER, because no buttons are pressed on the app we "return"
-    to escape the else if statement.
-    Second call of void loop, we get button pressed, infoPresent becomes true, so we them interpret the data 
-    coming from the app and act accordingly.
-    */
-    if(!infoPresent) {return;} 
-    interpretData(receivedData); //Parameter is the data we receive
-  } 
-  else if(operation == "FOLLOW_LIGHT") { //When no operaion is running we:
-    followLight(); //Follow light
-  }
-  
-  //MUST IMPLEMENT INSIDE INTERPRET DATA SO THAT IF SUM IS ABOVE THRESHOLD DONT MOVE-----------------------------------------
-  checkLogic();
+    
+    determineOperation(); //We need to find out what task should we carry out from the options below
+    
+    //Tasks
+    //We initialized operation to follow light so that it'll follow the light until otherwise
+    if(operation == "READ_WATTAGE") { //When operation is set to the wattage reader do:
+      outputWattageToApp(); //Sent wattage info to app
+      delay(900); //This plus the 100ms delay at the end sum to 1sec, which is the required interval
+    } 
+    else if(operation == "MOVE_TRACKER") { //When operation is set to manually move tracker do:
+      /*The code below is important: We set operation to move tracker but if no bool flag present
+      operation will remain as move tracker and it will continue to move the robot in the first direction 
+      you give. To fix this we need to know when instructions are coming in from the app to move the tracker
+      w/o compromising the current method (using variable "operation" to define task). 
+      So, a run down on how it works:
+      First call of void loop, operation is MOVE TRACKER, because no buttons are pressed on the app we "return"
+      to escape the else if statement.
+      Second call of void loop, we get button pressed, infoPresent becomes true, so we them interpret the data 
+      coming from the app and act accordingly.
+      */
+      if(!infoPresent) {return;} 
+      interpretData(receivedData); //Parameter is the data we receive
+    } 
+    else if(operation == "FOLLOW_LIGHT") { //When no operaion is running we:
+      followLight(); //Follow light
+    }
+    
+    //MUST IMPLEMENT INSIDE INTERPRET DATA SO THAT IF SUM IS ABOVE THRESHOLD DONT MOVE-----------------------------------------
+    checkLogic();
 
-  delay(100);
+    delay(100);
+  }
 }
 
 //METHODS in order of appearance........................................................
@@ -123,19 +130,9 @@ void searchForLight(char axis, int maxAngleRange, bool needLightSource ) { //Las
   else if (axis == 'y') {yServo.write(anglePositionAtHighestValueY); currentAngleY = anglePositionAtHighestValueY;}
    
   if (currentHighestLightValue > ambientLightOffset && needLightSource) { //If the highest light source is above a threshold do (So that it ignores ambient light)
-    lightSourceFound(1); //Manually set lightsourcefound to true
+    lightSourceFound = true; 
     lightSourceToFollow = currentHighestLightValue; //This is a value that will be used later on by follow light to make sure it is following that value..........
-  } else {lightSourceFound(0);} //Manually set lightsourcefound to false
-}
-
-//CHECK LOGIC LATER-----------------------------------------------------------------------------------------
-bool lightSourceFound(int state) {
- 
- if(state == 1) {
-    return true;
-  } else if (state == 0) {
-    return false;
-  }
+  } else {lightSourceFound = false;}
 }
 
 void determineOperation() { //Find out what we're doing
