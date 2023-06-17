@@ -27,6 +27,8 @@ bool lightSourceFound;
 const int lightSourceOffset = 200; //To keep following the initial light intensity
 const int ambientLightOffset = 400; //To make sure you're pointing at a light source
 const int yOffset = 20; //To offset the distance between panel and sensors
+const int sensorDif = 10; //Calibration pending----------------------------------------
+const int idleTime = 200; //Time taken for offset to kick in (200 = 20sec)
 
 //OBTAINING WATTAGE:
 const int voltagePin = A2;
@@ -213,7 +215,7 @@ void followLight() { //After finding out highest light source follow it
     move2 = true;
   } else {move2 = false;}
   
-  if (rightLdrValue < leftLdrValue && move && move2) { //If rightLdrValue is less than the second and it is beyond the threshold do:
+  if ((rightLdrValue - sensorDif) < leftLdrValue && move && move2) { //If rightLdrValue is less than the second and it is beyond the threshold do:
     counter++; //Count so that we know when to update y-angle position
     currentAngleX--; //Increments its angle by one
     xServo.write(currentAngleX); //write it to motor  
@@ -259,7 +261,7 @@ void checkLogic() { //If current angle is above or below allowed threshold then 
 }
 
 void positionSolarPanelAtBetterAngle() {
-  if (timer > 200) { //+- 20 seconds 
+  if (timer > idleTime) { //+- 20 seconds 
       timer = 0; //Reset clock
       if (currentAngleY >= yOffset) {
         currentAngleY = currentAngleY - yOffset; //Make sure pointing directly at sun
