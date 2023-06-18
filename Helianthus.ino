@@ -22,12 +22,13 @@ int counter = 0; //To calc the number of rotations made by servo
 int timer = 0; //timer
 bool done = false; //flag
 bool lightSourceFound;
+bool isOffsetOn = false;
 
 //Alter-able value
 const int lightSourceOffset = 200; //To keep following the initial light intensity
 const int ambientLightOffset = 400; //To make sure you're pointing at a light source
 const int yOffset = 20; //To offset the distance between panel and sensors
-const int sensorDif = 10; //Calibration pending----------------------------------------
+const int sensorDif = 25; //Calibration pending----------------------------------------
 const int idleTime = 200; //Time taken for offset to kick in (200 = 20sec)
 
 //OBTAINING WATTAGE:
@@ -178,10 +179,10 @@ float readWattage() {
 }
 
 void interpretData(char data) { //Find out what data is being sent by app
-  if(data == '1' && (currentAngleY - 5) >= 0) { //UP
+  if(data == '1' && (currentAngleY - 5) >= 5) { //UP
     currentAngleY = currentAngleY - 5;
     yServo.write(currentAngleY);
-  } else if (data == '2' && (currentAngleY + 5) <= 95) { //DOWN
+  } else if (data == '2' && (currentAngleY + 5) <= 90) { //DOWN
     currentAngleY = currentAngleY + 5;
     yServo.write(currentAngleY);
   } else if (data == '3' && (currentAngleX + 10) <= 150) { //RIGHT
@@ -192,6 +193,7 @@ void interpretData(char data) { //Find out what data is being sent by app
     xServo.write(currentAngleX);
   }
   timer = 0;
+  isOffsetOn = false;
 }
 
 void followLight() { //After finding out highest light source follow it 
@@ -220,12 +222,14 @@ void followLight() { //After finding out highest light source follow it
     currentAngleX--; //Increments its angle by one
     xServo.write(currentAngleX); //write it to motor  
     timer = 0;
+    isOffsetOn = false;
   }
   else if (rightLdrValue > leftLdrValue && move && move2) { //Same here
     counter++;
     currentAngleX++;
     xServo.write(currentAngleX);
     timer = 0;
+    isOffsetOn = false;
     
   }
   
@@ -263,9 +267,10 @@ void checkLogic() { //If current angle is above or below allowed threshold then 
 void positionSolarPanelAtBetterAngle() {
   if (timer > idleTime) { //+- 20 seconds 
       timer = 0; //Reset clock
-      if (currentAngleY >= yOffset) {
+      if (currentAngleY >= yOffset && !isOffsetOn) {
         currentAngleY = currentAngleY - yOffset; //Make sure pointing directly at sun
         yServo.write(currentAngleY);
+        isOffsetOn = true;
       } else {return;}
     } 
 }
