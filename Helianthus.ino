@@ -28,7 +28,7 @@ bool isOffsetOn = false;
 const int lightSourceOffset = 200; //To keep following the initial light intensity
 const int ambientLightOffset = 400; //To make sure you're pointing at a light source
 const int yOffset = 20; //To offset the distance between panel and sensors
-const int sensorDif = 25; //Calibration pending----------------------------------------
+const int sensorDif = 250;
 const int idleTime = 200; //Time taken for offset to kick in (200 = 20sec)
 
 //OBTAINING WATTAGE:
@@ -208,8 +208,7 @@ void followLight() { //After finding out highest light source follow it
   bool move; //We need to check to things
   bool move2;
   
-  if (difference >= 0 && difference <= 5) { //If the difference is within a threshold then don't move
-   move = false;
+  if (difference >= 0 && difference <= 10) { //If the difference is within a threshold then don't move
   } else {move = true;}
   
   //Make sure we're following the same light source, unaffected by other's
@@ -224,7 +223,7 @@ void followLight() { //After finding out highest light source follow it
     timer = 0;
     isOffsetOn = false;
   }
-  else if (rightLdrValue > leftLdrValue && move && move2) { //Same here
+  else if ((rightLdrValue - sensorDif) > leftLdrValue && move && move2) { //Same here
     counter++;
     currentAngleX++;
     xServo.write(currentAngleX);
@@ -235,11 +234,7 @@ void followLight() { //After finding out highest light source follow it
   
   //After 30 +- rotations check for y anlge
   if (counter == 30) {
-    if(currentAngleX < 60 || currentAngleX > 120) {
-      searchForLight('y', 95, false);
-    } else if (currentAngleX >= 75 && currentAngleX <= 120) { //We are following the sun so it is higher-up at midday 
-      searchForLight('y', 60, false); 
-    }
+    searchForLight('y', 95, false);
     counter = 0; //Reset the counter
     
   }
@@ -253,15 +248,9 @@ void checkLogic() { //If current angle is above or below allowed threshold then 
   }
   if (currentAngleY > 95) { //Checking Y-axis
     currentAngleY = 95;
-  } else if (currentAngleX < 0) {
-    currentAngleX = 0;
+  } else if (currentAngleY < 0) {
+    currentAngleY = 0;
   }
-  
-  /*if (currentAngleY < 10) { //ONLY IF NECESSARY, (prevents 0º)
-    currentAngleY = 10;
-    yServo.write(currentAnlgeY;)
-    timer = 0;
-  }*/
 }
 
 void positionSolarPanelAtBetterAngle() {
