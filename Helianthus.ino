@@ -12,8 +12,6 @@ const int yPin = 10;
 //Declaring variables
 int rightLdrValue = 0;
 int leftLdrValue = 0; 
-int anglePositionAtHighestValueX = 0; //variable to store highest light value
-int anglePositionAtHighestValueY = 0;
 int currentAngleX; //Used to alter the current angle positions
 int currentAngleY;
 int lightSourceToFollow;
@@ -58,6 +56,8 @@ void loop() {
     terminateAtSecondSearch++;
     
     if (!lightSourceFound) { //If there's still no light source found keep going
+      currentAngleX = 95;
+      xServo.write(currentAngleX);
       searchForLight('x', 150, false); //Same as above
       searchForLight('y', 95, true);
       if(!lightSourceFound){terminateAtSecondSearch++;}
@@ -98,6 +98,7 @@ void loop() {
 
     positionSolarPanelAtBetterAngle();
 
+    
     delay(100);
   }
 }
@@ -109,8 +110,8 @@ void searchForLight(char axis, int maxAngleRange, bool needLightSource ) { //Las
   
   int currentHighestLightValue = 0; //Used to compare between the highest and current light values
   
-  if(axis == 'x') {xServo.write(0);} //This is a tradeoff if I were to optimize the code
-  else if (axis == 'y') {yServo.write(0);} //Initializes servomotor to 0 degrees so that it can scan around
+  if(axis == 'x') {currentAngleX = 0; xServo.write(currentAngleX);} //This is a tradeoff if I were to optimize the code
+  else if (axis == 'y') {currentAngleY = 0; yServo.write(currentAngleY);} //Initializes servomotor to 0 degrees so that it can scan around
   
   for(int angle = 0; angle <= maxAngleRange; angle++) { //Using the value given by the parameter, the scan will go up until it satisifies the statement
     
@@ -123,8 +124,9 @@ void searchForLight(char axis, int maxAngleRange, bool needLightSource ) { //Las
     if(ldrMeanValue > currentHighestLightValue) { //If value surpasses previous highest value do: 
       currentHighestLightValue = ldrMeanValue; //Set new highest value
       
-      if(axis == 'x') {anglePositionAtHighestValueX = angle;} //Stores the angle positions so that it can later, retrace its steps
-      else if (axis == 'y') {anglePositionAtHighestValueY = angle;}
+      if(axis == 'x') {currentAngleX = angle;} //Stores the angle positions so that it can later, retrace its steps
+      else if (axis == 'y') {currentAngleY = angle;}
+      Serial.println(currentAngleY);
     }
     
     if(axis == 'x') {xServo.write(angle);} //Move the servo by 1 degree every iteration
@@ -134,8 +136,8 @@ void searchForLight(char axis, int maxAngleRange, bool needLightSource ) { //Las
   }
 
   //Set servo to the highest light intensity location 
-  if(axis == 'x') {xServo.write(anglePositionAtHighestValueX); currentAngleX = anglePositionAtHighestValueX;}
-  else if (axis == 'y') {yServo.write(anglePositionAtHighestValueY); currentAngleY = anglePositionAtHighestValueY;}
+  if(axis == 'x') {xServo.write(currentAngleX);}
+  else if (axis == 'y') {yServo.write(currentAngleY);}
    
   if (currentHighestLightValue > ambientLightOffset && needLightSource) { //If the highest light source is above a threshold do (So that it ignores ambient light)
     lightSourceFound = true; 
@@ -166,7 +168,7 @@ void determineOperation() { //Find out what we're doing
 void outputWattageToApp() { //We output wattage values to the app
   float wattage = readWattage(); //Find wattage
   wattage = abs(wattage); //Make it positive
-  byte outputWattage = (map(wattage*100, 0, 100, 0, 25500)/100); //Convert wattage value to 0,255 (Max 1W)
+  byte outputWattage = (map(wattage*100, 0, 100, 0, 25500)/100); //Convert wattage value to 0,255 (Max 1mW)
   Serial.write(outputWattage);
 }
 
@@ -201,14 +203,22 @@ void followLight() { //After finding out highest light source follow it
   
   rightLdrValue = analogRead(rightLdrPin); //Start reading sensors
   leftLdrValue = analogRead(leftLdrPin) ;
+  /*Serial.print("rightLdr: ");
+  Serial.println(rightLdrValue);
+  Serial.print("leftLdr: ");
+  Serial.println(leftLdrValue);*/
   
   int ldrMeanValue = (rightLdrValue + leftLdrValue) / 2; 
   int difference = abs(rightLdrValue - leftLdrValue); //Find the difference in value of both ldrs
+  /*Serial.print("ldrMean: ");
+  Serial.println(ldrMeanValue);*/
+  Serial.print("Difference: ");
+  Serial.println(difference);
   
   bool move; //We need to check to things
   bool move2;
   
-  if (difference >= 0 && difference <= 10) { //If the difference is within a threshold then don't move
+  if (difference >= 0 && difference <= 15) { //If the difference is within a threshold then don't move
   } else {move = true;}
   
   //Make sure we're following the same light source, unaffected by other's
